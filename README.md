@@ -19,6 +19,7 @@ This **Cloudflare Worker** sits between your frontend application and Algolia's 
 - 🔌 **Plug-and-Play Frontend Integration**: Integrates instantly by swapping out the Algolia host URL in your frontend client.
 - 🔒 **Privacy-Safe & Deterministic**: Automatically strips dynamic, user-specific parameters (`userToken`) before hashing, ensuring that identical queries from different users safely share the exact same global cache.
 - 🔑 **Universal Compatibility**: Supports all of Algolia's frontend libraries out of the box (InstantSearch, React, Vue, pure JS) by extracting credentials via both HTTP Headers and Query Parameters.
+- 🏢 **Multi-App & Multi-Index Ready**: Because the SHA-256 cache key specifically incorporates the Algolia API Key found in the request payload, this worker natively and safely supports querying completely different Algolia Applications, API Keys, and Indexes simultaneously without any cache bleeding or collision. Deploy it once, and place it in front of all your projects.
 
 ### 💰 Cost Comparison
 
@@ -133,6 +134,13 @@ Define how long search responses should stay cached:
 1. Open `src/config.js`.
 2. Replace `'*'` with your actual frontend domain(s) (e.g., `'https://your-website.com'`). You can add multiple domains as separate strings in the array.
 3. Redeploy the worker.
+*(Note: For advanced CI/CD pipelines, consider overriding this value using `wrangler.jsonc` `[vars]` to avoid committing production domains to your source code repository).*
+
+### 🛡️ Prevent Malicious Billing (Cache-Busting) Attacks
+
+Because Algolia bills based on number of search requests, and this proxy caches does it based on the exact search string, an attacker could write a script that sends thousands of random, unique queries (e.g., `query="random-uuid-1"`). Since these will never hit the cache, and they will all be forwarded to Algolia and consume your Algolia quota.
+
+You should configure **[Cloudflare Rate Limiting (WAF Rules)](https://developers.cloudflare.com/waf/rate-limiting-rules/)** on your Custom Domain to aggressively block IPs making an unnatural volume of search requests.
 
 ### Connect a Custom Domain (Highly Recommended)
 
@@ -210,12 +218,14 @@ index.search('query').then(({ hits }) => {
 
 > Read more in [Algolia's Custom Hosts Documentation](https://www.algolia.com/doc/libraries/sdk/customize#custom-hosts).
 
+> **Peace of Mind Guarantee:** By explicitly defining these fallback hosts in your initialization, Algolia's SDK guarantees that if your Cloudflare Worker is ever down, misconfigured, or returning 5xx errors, it will instantly and smoothly route the user's search query to the official Algolia servers without breaking the frontend experience.
+
 ## ⚠️ Known Trade-offs & Limitations
 
 Using an aggressive caching architecture inherently means you're trading a few of Algolia's dynamic features in exchange for speed and reduced costs. You must be aware of:
 
 - **Search Only (Do not use for Backend/Indexing)**: This proxy is designed **exclusively for Search (Read) requests originating from frontend clients**. Do not configure your backend/indexing clients to use this proxy, as write operations will fail on Algolia's DSN endpoints.
-- **Analytics Drift**: Since cached queries never physically hit Algolia, your internal Algolia dashboard analytics (top searches, click CTRs, conversions) will underreport volume. 
+- **Analytics Drift & Click Analytics Corruption**: Since cached queries never physically hit Algolia, your internal Algolia dashboard analytics (top searches, click CTRs, conversions) will underreport volume. **Crucially, if you rely on Click Analytics & Insights**, this proxy will break your tracking. It will serve the identical `queryID` to thousands of different users, resulting in highly distorted user journey tracking within Algolia's machine learning models.
 - **No Native Personalization**: Algolia's "Personalized Results" feature heavily relies on the `userToken` header. Because this worker purposely strips the `userToken` off the request body (so the cache is homogenized globally across all users), native personalization will simply **not work**.
 - **A/B Testing Impact**: If utilizing Algolia A/B testing dynamically behind the scenes, Cloudflare Edge caches might lock onto a specific A/B variant and erroneously serve it universally to all users.
 - **P99 Initial Latency**: The very first time a brand new search term is queried (Cache Miss), the latency will feature a small 50-100ms penalty overhead due to the Worker acting as an intermediary network hop before consulting Algolia.
