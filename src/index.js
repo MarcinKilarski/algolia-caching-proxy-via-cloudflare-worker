@@ -84,8 +84,6 @@ export default {
 					/**
 					 * Background Caching
 					 * We prepare the response for the cache by adding TTL (Time To Live) headers.
-					 * ctx.waitUntil ensures the Worker stays alive long enough to finish 
-					 * writing to the cache even after the user gets their answer.
 					 */
 					const responseToCache = new Response(originResponse.body, originResponse);
 					responseToCache.headers.set("Cache-Control", `s-maxage=${CDN_CACHE_TTL}`);
@@ -95,7 +93,11 @@ export default {
 					responseToCache.headers.delete("content-encoding");
 					responseToCache.headers.delete("content-length");
 
+
+					// Using ctx.waitUntil ensures the Worker stays alive long enough to finish 
+					// writing to the cache even after the user gets their answer.
 					ctx.waitUntil(cache.put(cacheKey, responseToCache.clone()));
+
 					response = responseToCache;
 				}
 
