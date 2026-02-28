@@ -30,6 +30,7 @@ Algolia's pricing scales directly with your usage. Meanwhile, Cloudflare Workers
 | **Cloudflare Workers** | 100k requests/day | +$0.30 per 1M requests | [Workers Pricing](https://developers.cloudflare.com/workers/platform/pricing/) |
 
 ### 📉 Estimated Monthly Savings
+
 *Assuming cache is cleared once a month.*
 
 | Searches / Month | Direct Algolia Cost | Cached via CF Worker | Cost Savings |
@@ -96,6 +97,7 @@ npm install
 ```
 
 ### 3. Development
+
 Run the local Cloudflare development server:
 ```bash
 npm run dev
@@ -103,6 +105,7 @@ npm run dev
 Your worker will be locally accessible at `http://localhost:8787`.
 
 ### 4. Deploy to Production
+
 Authenticate your terminal with Cloudflare:
 ```bash
 npx wrangler login
@@ -138,8 +141,10 @@ Deploying to a default `.workers.dev` subdomain limits your caching capabilities
 - **Smart Tiered Cache**: Instead of caching user requests only in the nearest Cloudflare datacenter, Cloudflare routes requests through centralized regional hubs. This significantly increases cache hit rates and reduces origin trips, **significantly lowering the number of requests sent to Algolia**. [Read more here.](https://developers.cloudflare.com/cache/how-to/tiered-cache/#smart-tiered-cache)
 - **Manual Cache Purging**: Without a custom domain, you cannot manually clear the edge cache and must wait for the TTL to naturally expire.
 
-**How to configure:**
+#### How to configure
+
 You can assign a custom domain using the Cloudflare Dashboard (under the Worker's **Triggers** tab), or by adding it directly to your `wrangler.jsonc` file:
+
 ```jsonc
 "routes": [
   { 
@@ -218,6 +223,7 @@ Using an aggressive caching architecture inherently means you're trading a few o
 ## 🔧 Maintenance & Troubleshooting
 
 ### Checking Cache Status
+
 To verify if a response was served from the cache or fetched from the origin (Algolia), inspect the `cf-cache-status` header in the Worker's HTTP response.
 
 - `HIT`: The response was served directly from Cloudflare's edge cache.
@@ -227,12 +233,14 @@ To verify if a response was served from the cache or fetched from the origin (Al
 Read more in [Cloudflare's cf-cache-status header explained](https://www.debugbear.com/docs/cf-cache-status/).
 
 ### Live Worker Log Monitoring
+
 If you're troubleshooting unexpected behavior, hook into real-time production Worker logs directly via your terminal:
 ```bash
 npx wrangler tail algolia-caching-proxy-via-cloudflare-worker
 ```
 
 ### Invalidating Edge Caches
+
 When performing a large-scale database sync directly to Algolia, you must force Cloudflare to wipe its edge cache (Note: this explicitly requires applying a Custom Domain mentioned above).
 
 **Option 1: Via Cloudflare Dashboard UI:**
@@ -262,12 +270,15 @@ See [Cloudflare API Documentation](https://developers.cloudflare.com/api/resourc
 | `wrangler.jsonc` | Cloudflare Workers unified infrastructure declaration list. |
 
 ## 🤝 Contributing
+
 Found a bug or have an improvement? Pull requests are highly welcome! Please submit an issue structurally detailing your changes before pushing large functional overhauls.
 
 ## 🙏 Acknowledgements
+
 Inspired by:
 - [Eric Turner's gist on Algolia Proxying](https://gist.github.com/etdev/bb49f0f60ea5ec9deb5977b1fbfb4046)
 - [Cloudflare's Cache POST Request Example](https://developers.cloudflare.com/workers/examples/cache-post-request/)
 
 ## 📄 License
+
 Released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).

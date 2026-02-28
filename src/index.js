@@ -93,7 +93,6 @@ export default {
 					responseToCache.headers.delete("content-encoding");
 					responseToCache.headers.delete("content-length");
 
-
 					// Using ctx.waitUntil ensures the Worker stays alive long enough to finish 
 					// writing to the cache even after the user gets their answer.
 					ctx.waitUntil(cache.put(cacheKey, responseToCache.clone()));
