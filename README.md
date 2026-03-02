@@ -1,12 +1,12 @@
 ![Algolia Proxy Cloudflare Worker](thumbnail.png)
 
-# ⚡️ Algolia Caching Proxy via Cloudflare Workers
+# ⚡️ Algolia Cloudflare Worker proxy (Caching)
 
 [![Algolia](https://img.shields.io/badge/Algolia-Search-003DFF?logo=algolia&logoColor=white)](https://www.algolia.com/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
 
-> A high-performance, drop-in **Cloudflare Worker middleware** that aggressively caches Algolia search requests globally at the edge, drastically slashing your Algolia operations bill without sacrificing search speed.
+> A high-performance, drop-in **Algolia Cloudflare Worker proxy** that aggressively caches Algolia search requests globally at the edge, drastically slashing your Algolia operations bill without sacrificing search speed.
 > 
 > **⚠️ Disclaimer:** This project is an independent open-source tool and is not affiliated with, endorsed by, or supported by Algolia.
 
@@ -20,7 +20,7 @@ This **Cloudflare Worker** sits between your frontend application and Algolia's 
 
 ### ✨ Why You Need It
 
-- 💸 **Huge Cost Savings**: Reduce billable Algolia operations by up to 100% for highly repetitive searches.
+- 💸 **Huge Cost Savings**: Reduce Algolia pricing/costs by decreasing billable operations by up to 100% for highly repetitive searches.
 - ⚡️ **Edge Speed Delivery**: Serve cached search results from the absolute nearest Cloudflare node to your users (~10-30ms response times).
 - 🔌 **Plug-and-Play Frontend Integration**: Integrates instantly by swapping out the Algolia host URL in your frontend client.
 - 🔒 **Privacy-Safe & Deterministic**: Automatically strips dynamic, user-specific parameters (`userToken`) before hashing, ensuring that identical queries from different users safely share the exact same global cache.
@@ -245,7 +245,7 @@ Read more in [Cloudflare API Documentation](https://developers.cloudflare.com/ap
 
 ## 🏗️ Architecture: How it Works
 
-Algolia strictly requires `POST` requests for searches. However, virtually all CDN services (including Cloudflare) normally **only cache `GET` requests**. This worker uses a "Ghost GET Request" workaround to force Cloudflare to cache Algolia `POST` responses:
+Algolia strictly requires `POST` requests for searches. However, virtually all CDN services (including Cloudflare) normally **only cache `GET` requests**. This worker uses a "Ghost GET Request" workaround to cache Algolia search results, allowing Cloudflare to cache Algolia `POST` responses:
 
 1. **Intercept & Cleanse**: Catches the incoming `POST` request and cleanses dynamic, non-cacheable tokens (like `userToken`) from the JSON POST body.
 2. **Deterministic Hashing**: Generates a hyper-fast SHA-256 hash of the cleansed payload.
