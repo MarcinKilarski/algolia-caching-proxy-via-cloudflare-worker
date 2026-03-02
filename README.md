@@ -94,7 +94,7 @@ sequenceDiagram
 
 Clone the repository, enter the directory, and install the local packages:
 ```bash
-git clone <repository-url> algolia-caching-proxy-via-cloudflare-worker
+git clone https://github.com/MarcinKilarski/algolia-caching-proxy-via-cloudflare-worker.git algolia-caching-proxy-via-cloudflare-worker
 cd algolia-caching-proxy-via-cloudflare-worker
 npm install
 ```
