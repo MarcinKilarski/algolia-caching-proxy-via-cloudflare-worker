@@ -135,6 +135,10 @@ Once authenticated, you can deploy the worker by running:
 npm run deploy
 ```
 
+By default, the worker will be deployed to a Cloudflare subdomain (e.g., `https://algolia-caching-proxy-via-cloudflare-worker.<your-account-name>.workers.dev`). You can change this by adding a custom domain to your worker in the Cloudflare Dashboard or by adding it to your `wrangler.jsonc` file.
+
+Read more in [Cloudflare's deploy command documentation](https://developers.cloudflare.com/workers/wrangler/commands/#deploy).
+
 ## 💻 Step 2: Frontend Integration (Client)
 
 To start routing traffic through your new Worker, add 'hosts' array to the Algolia client initialization config in your frontend code:
@@ -158,9 +162,9 @@ const client = algoliasearch(
       // -----------------------------------------------------------
       // 1. PRIMARY HOST (PRODUCTION)
       // This routes all search requests through your deployed Cloudflare Worker.
-      // (Make sure to replace "algolia-cache.your-website.com" with the domain you assigned to your worker!)
+      // (Make sure to replace "your-worker-url.com" with your worker url or the custom domain you assigned to your worker!)
       // -----------------------------------------------------------
-      { protocol: "https", url: "algolia-cache.your-website.com" },
+      { protocol: "https", url: "your-worker-url.com" },
 
       // -----------------------------------------------------------
       // 2. FALLBACK HOSTS (CRITICAL)
@@ -214,6 +218,8 @@ If you're troubleshooting unexpected behavior, hook into real-time production Wo
 npx wrangler tail
 ```
 
+Read more in [Cloudflare's tail command documentation](https://developers.cloudflare.com/workers/wrangler/commands/#tail).
+
 ### Invalidating Edge Caches
 
 When performing a large-scale database sync directly to Algolia, you must force Cloudflare to wipe its edge cache (Note: this explicitly requires applying a Custom Domain mentioned above).
@@ -223,7 +229,7 @@ When performing a large-scale database sync directly to Algolia, you must force 
 2. Go to **Caching** > **Configuration**.
 3. Hit **Purge Everything** (Or **Purge by Prefix**: `/cache/`).
 
-See [Cloudflare Docs](https://developers.cloudflare.com/cache/how-to/purge-cache/) for more info.
+Read more in [Cloudflare Purge Cache Docs](https://developers.cloudflare.com/cache/how-to/purge-cache/).
 
 **Option 2: Via Headless cURL (Automated Deployments):**
 ```bash
@@ -233,7 +239,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/<YOUR_ZONE_ID>/purge_ca
     --data '{"purge_everything":true}'
 ```
 
-See [Cloudflare API Documentation](https://developers.cloudflare.com/api/resources/cache/) for more info.
+Read more in [Cloudflare API Documentation](https://developers.cloudflare.com/api/resources/cache/).
 
 ## 🏗️ Architecture: How it Works
 
