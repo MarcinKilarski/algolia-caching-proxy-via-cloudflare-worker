@@ -359,7 +359,7 @@ No. This proxy is designed exclusively for Search (Read) requests. You should no
 
 <details>
 <summary><b>13. How does the proxy handle different Algolia indices or API keys?</b></summary>
-The unique cache key is generated using a SHA-256 hash that natively incorporates the API Key, Application ID, and query payload. This means it safely supports querying completely different Algolia Applications and Indexes simultaneously without cache bleeding.
+The unique cache key natively incorporates the API Key and query payload in its mathematical hash, while preserving the Algolia Application ID and Index Name within the URL path structure. This means it safely supports querying completely different Algolia Applications and Indexes simultaneously without cache bleeding.
 </details>
 
 <details>
@@ -429,7 +429,7 @@ No. Standard Algolia Rules (e.g., pinning an item, synonyms) execute on Algolia'
 
 <details>
 <summary><b>27. Can I cache multiple Algolia indices with one Cloudflare Worker?</b></summary>
-Yes. The requested index name is part of the URL path and payload, which is hashed into the cache key. Two identical searches on different indices will generate two distinct cache entries.
+Yes. The requested index name is part of the URL path, meaning it naturally becomes part of the unique URL cache key, while the payload is independently hashed. Two identical searches on different indices will generate two distinct cache entries.
 </details>
 
 <details>
@@ -464,7 +464,7 @@ You could modify the code to do so, but the native Cache API is significantly fa
 
 <details>
 <summary><b>34. What if my Algolia POST payload is unusually large?</b></summary>
-Cloudflare's Cache API natively supports large payloads. Unless your search query payload exceeds 512MB (which Algolia would reject anyway), the Worker handles it seamlessly.
+Cloudflare's Cache API natively supports caching massive response payloads (up to 512MB). For incoming search queries, the POST payload sent by the user must simply stay under Cloudflare Workers' generous 100MB incoming request limit, which is safely well above anything Algolia would typically accept.
 </details>
 
 <details>
@@ -544,7 +544,7 @@ Browser caching only benefits a single user *after* they search for something tw
 
 <details>
 <summary><b>50. Can I modify what gets stripped from the payload?</b></summary>
-Yes! If you have custom parameters that don't affect search results but vary per user (like analytics tags), open `src/utils.js` and add those keys to the `cleansePayload` function to improve your hit rate.
+Yes! If you have custom parameters that don't affect search results but vary per user (like analytics tags), open `src/utils.js` and add those keys to the `normalizeAlgoliaBody` function to improve your hit rate.
 </details>
 
 <details>
@@ -684,7 +684,7 @@ If a browser cancels an inflight HTTP connection on a Cache Hit, nothing changes
 
 <details>
 <summary><b>78. Can I deploy a single Cloudflare Worker to proxy multiple different Algolia applications?</b></summary>
-Yes, because the SHA-256 hash incorporates the Request's target Application ID and API Key, different applications interacting with the single worker naturally segment their caches, removing any risk of cross-application data bleeding.
+Yes. Because the explicit Application ID is natively extracted and mapped into the routed request url path while the API Key is mathematically hashed, different applications interacting with the single worker naturally segment their caches, removing any risk of cross-application data bleeding.
 </details>
 
 <details>
@@ -719,7 +719,7 @@ Yes. Because the Worker maps cached requests to pseudo `GET` URLs on your custom
 
 <details>
 <summary><b>85. What is the max URL length supported for the "Ghost GET Request"?</b></summary>
-The proxy translates the SHA-256 hash (64 characters) into a path `https://your-website.com/cache/<hash>`. Therefore, the URL length is completely arbitrary and well under any CDN or protocol limit (e.g., 2048 characters).
+The proxy translates the SHA-256 hash (64 characters) into a path `https://your-worker-domain.com/cache/1/indexes/YOUR_INDEX_NAME/queries/<hash>`. Therefore, the URL length is completely predictable and well under any CDN or protocol limit (e.g., 2048 characters).
 </details>
 
 <details>
