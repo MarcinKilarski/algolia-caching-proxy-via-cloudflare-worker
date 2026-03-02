@@ -31,8 +31,8 @@ Algolia's pricing scales directly with your usage. Meanwhile, Cloudflare Workers
 
 | Platform | Free Tier | Overage Cost | Pricing |
 | :--- | :--- | :--- | :--- |
-| **Algolia** | 10k searches/month | +$0.50 per 1K searches | [Algolia Pricing](https://www.algolia.com/pricing/) |
-| **Cloudflare Workers** | 100k requests/day | +$0.30 per 1M requests | [Workers Pricing](https://developers.cloudflare.com/workers/platform/pricing/) |
+| **Algolia** | 10k searches/month | +$0.50 per 1K searches | [Algolia](https://www.algolia.com/pricing/) |
+| **Cloudflare Workers** | 100k requests/day | +$0.30 per 1M requests | [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/pricing/) |
 
 ### 📉 Estimated Monthly Savings
 
@@ -211,7 +211,7 @@ Read more in [Cloudflare's cf-cache-status header explained](https://www.debugbe
 
 If you're troubleshooting unexpected behavior, hook into real-time production Worker logs directly via your terminal:
 ```bash
-npx wrangler tail algolia-caching-proxy-via-cloudflare-worker
+npx wrangler tail
 ```
 
 ### Invalidating Edge Caches
