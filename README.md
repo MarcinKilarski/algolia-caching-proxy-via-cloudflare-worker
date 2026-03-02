@@ -105,16 +105,16 @@ Run the local Cloudflare development server:
 ```bash
 npm run dev
 ```
-Your worker will be locally accessible at `http://localhost:8787`.
+Your worker will be locally accessible by default at `http://localhost:8787`.
 
 ### 4. Deploy to Production
 
-Authenticate your terminal with Cloudflare:
+To deploy your worker to Cloudflare, first you will need to authenticate your terminal with Cloudflare. You can do this by running:
 ```bash
 npx wrangler login
 ```
 
-Deploy the worker:
+Once authenticated, you can deploy the worker by running:
 ```bash
 npm run deploy
 ```
