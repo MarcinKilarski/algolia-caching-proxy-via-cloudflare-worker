@@ -6,26 +6,26 @@
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/license/apache-2-0)
 
-> A high-performance, drop-in **Algolia Cloudflare Worker proxy** that aggressively caches Algolia search requests globally at the edge, drastically slashing your Algolia operations bill without sacrificing search speed.
-> 
-> **⚠️ Disclaimer:** This project is an independent open-source tool and is not affiliated with, endorsed by, or supported by Algolia.
+> A high-performance, drop-in **Algolia Caching Proxy via Cloudflare Worker** that aggressively caches Algolia search queries globally at the CDN edge. This open-source tool drastically reduces your Algolia pricing and operations bill, allowing you to **cache Algolia search results** effortlessly without sacrificing search speed or frontend compatibility.
+
+> **⚠️ Disclaimer:** This project is an independent open-source tool for Algolia cost optimization and is not affiliated with, endorsed by, or supported by Algolia or Cloudflare.
 
 ## ✨ The Value
 
 ### 📖 What is this?
 
-Algolia is blazingly fast but charges per search request. For high-traffic sites (e.g., e-commerce platforms, documentation hubs, or media portals), identical search queries are performed thousands of times a day. This directly translates to high, recurring costs. Even for open source or personal side projects, repetitive searches can quickly exhaust Algolia's free tier limits.
+Algolia is a blazingly fast search engine, but its pricing model charges per search request. For high-traffic applications (e.g., e-commerce platforms, documentation hubs, or media portals), identical search queries are performed thousands of times a day. This directly translates to high, recurring monthly costs. Even for open-source or personal side projects, repetitive searches can quickly exhaust Algolia's free tier limits.
 
-This **Cloudflare Worker** sits between your frontend application and Algolia's servers. It intercepts search requests and serves repeated queries directly from Cloudflare's massive global Edge CDN. The result? Cached requests **never** reach Algolia's servers, saving you money without sacrificing performance.
+This **Cloudflare Worker** acts as an intelligent reverse proxy and caching layer sitting between your frontend application (e.g., React InstantSearch, Vue, Vanilla JS) and Algolia's REST API. It intercepts Search API requests and serves repeated queries directly from Cloudflare's massive global Edge CDN. The result? Cached requests **never** reach Algolia's servers. By serving JSON responses from the edge, this architecture **reduces Algolia costs**, and provides a robust **Algolia Cloudflare Worker proxy** solution for frontend developers.
 
 ### ✨ Why You Need It
 
-- 💸 **Huge Cost Savings**: Reduce Algolia pricing/costs by decreasing billable operations by up to 100% for highly repetitive searches.
-- ⚡️ **Edge Speed Delivery**: Serve cached search results from the absolute nearest Cloudflare node to your users (~10-30ms response times).
-- 🔌 **Plug-and-Play Frontend Integration**: Integrates instantly by swapping out the Algolia host URL in your frontend client.
-- 🔒 **Privacy-Safe & Deterministic**: Automatically strips dynamic, user-specific parameters (`userToken`) before hashing, ensuring that identical queries from different users safely share the exact same global cache.
-- 🔑 **Universal Compatibility**: Supports all of Algolia's frontend libraries out of the box (InstantSearch, React, Vue, pure JS) by extracting credentials via both HTTP Headers and Query Parameters.
-- 🏢 **Multi-App & Multi-Index Ready**: Because the SHA-256 cache key specifically incorporates the Algolia API Key found in the request payload, this worker natively and safely supports querying completely different Algolia Applications, API Keys, and Indexes simultaneously without any cache bleeding or collision. Deploy it once, and place it in front of all your projects.
+- 💸 **Huge Cost Savings**: **Reduce Algolia pricing/costs** by decreasing billable operations by up to 100% for highly repetitive searches. Effectively run an **Algolia edge cache** to optimize your monthly expenses.
+- ⚡️ **Edge Speed Delivery**: Serve **cached Algolia search results** from the absolute nearest Cloudflare node to your users (~10-30ms response times), lowering server latency.
+- 🔌 **Plug-and-Play Frontend Integration**: Integrates instantly by swapping out the Algolia Application ID host URL in your frontend client SDK or InstantSearch library.
+- 🔒 **Privacy-Safe & Deterministic Payload Hashing**: Automatically strips dynamic, user-specific parameters (like `userToken`) before generating the SHA-256 cache key. This ensures that identical queries from different users safely share the exact same global cache without privacy leaks.
+- 🔑 **Universal Compatibility**: Acts as a drop-in **Algolia alternative pricing architecture** without replacing the engine. Supports all of Algolia's frontend libraries out of the box (InstantSearch, React, Vue, pure JS) by seamlessly extracting credentials via both HTTP Headers and Query Parameters from POST requests.
+- 🏢 **Multi-App & Multi-Index Ready**: Because the SHA-256 cache key specifically incorporates the Algolia API Key and Query Payload, this worker natively and safely supports querying completely different Algolia Applications and Indexes simultaneously. No cache collision, cache bleeding, or cross-index corruption. Deploy it once, and place it in front of all your projects.
 
 ### 💰 Cost Comparison & Estimated Savings
 
