@@ -8,13 +8,15 @@
 > 
 > **⚠️ Disclaimer:** This project is an independent open-source tool and is not affiliated with, endorsed by, or supported by Algolia.
 
-## 📖 What is this?
+## ✨ The Value
+
+### 📖 What is this?
 
 Algolia is blazingly fast but charges per search request. For high-traffic sites (e.g., e-commerce platforms, documentation hubs, or media portals), identical search queries are performed thousands of times a day. This directly translates to high, recurring costs. Even for open source or personal side projects, repetitive searches can quickly exhaust Algolia's free tier limits.
 
 This **Cloudflare Worker** sits between your frontend application and Algolia's servers. It intercepts search requests and serves repeated queries directly from Cloudflare's massive global Edge CDN. The result? Cached requests **never** reach Algolia's servers, saving you money without sacrificing performance.
 
-## ✨ Why You Need It
+### ✨ Why You Need It
 
 - 💸 **Huge Cost Savings**: Reduce billable Algolia operations by up to 100% for highly repetitive searches.
 - ⚡️ **Edge Speed Delivery**: Serve cached search results from the absolute nearest Cloudflare node to your users (~10-30ms response times).
@@ -23,7 +25,7 @@ This **Cloudflare Worker** sits between your frontend application and Algolia's 
 - 🔑 **Universal Compatibility**: Supports all of Algolia's frontend libraries out of the box (InstantSearch, React, Vue, pure JS) by extracting credentials via both HTTP Headers and Query Parameters.
 - 🏢 **Multi-App & Multi-Index Ready**: Because the SHA-256 cache key specifically incorporates the Algolia API Key found in the request payload, this worker natively and safely supports querying completely different Algolia Applications, API Keys, and Indexes simultaneously without any cache bleeding or collision. Deploy it once, and place it in front of all your projects.
 
-### 💰 Cost Comparison
+### 💰 Cost Comparison & Estimated Savings
 
 Algolia's pricing scales directly with your usage. Meanwhile, Cloudflare Workers offer a massive free tier and heavily discounted overages.
 
@@ -47,42 +49,17 @@ Algolia's pricing scales directly with your usage. Meanwhile, Cloudflare Workers
 
 > **Note**: Because the Worker needs at least one request to populate the cache initially (cache miss), your Algolia cost won't be absolute zero. However, it will be a fraction of the previous direct cost.
 
-## 🏗️ How it Works
+## ⚠️ Important Trade-offs
 
-Algolia strictly requires `POST` requests for searches. However, virtually all CDN services (including Cloudflare) normally **only cache `GET` requests**. This worker uses a "Ghost GET Request" workaround to force Cloudflare to cache Algolia `POST` responses:
+Using an aggressive caching architecture inherently means you're trading a few of Algolia's dynamic features in exchange for speed and reduced costs. You must be aware of:
 
-1. **Intercept & Cleanse**: Catches the incoming `POST` request and cleanses dynamic, non-cacheable tokens (like `userToken`) from the JSON POST body.
-2. **Deterministic Hashing**: Generates a hyper-fast SHA-256 hash of the cleansed payload.
-3. **Ghost GET Request**: Translates this hash into a simulated (ghost) `GET` URL to act as a unique cache-key for Cloudflare's Cache API.
-4. **Resolution**:
-   - **Cache Hit**: Resolves instantly directly from the Cloudflare Edge.
-   - **Cache Miss**: Forwards the exact original `POST` payload to Algolia. Upon receiving the result, it is immediately served to the user, while simultaneously being saved to the Edge Cache via a background `ctx.waitUntil()` process.
+- **Search Only (Do not use for Backend/Indexing)**: This proxy is designed **exclusively for Search (Read) requests originating from frontend clients**. Do not configure your backend/indexing clients to use this proxy, as write operations will fail on Algolia's DSN endpoints.
+- **Analytics Drift & AI Feature Corruption**: Since cached queries never physically hit Algolia, your internal Algolia dashboard analytics (top searches, click CTRs, conversions) will underreport volume. **Crucially, if you rely on AI features like Dynamic Re-Ranking, Query Categorization, or Click Analytics & Insights**, this proxy will break your tracking. It will serve the identical `queryID` to thousands of different users, resulting in highly distorted user journey tracking within Algolia's machine learning models.
+- **No Native Personalization**: Algolia's "Personalized Results" feature heavily relies on the `userToken` header. Because this worker purposely strips the `userToken` off the request body (so the cache is homogenized globally across all users), native personalization will simply **not work**.
+- **A/B Testing Impact**: If utilizing Algolia A/B testing dynamically behind the scenes, Cloudflare Edge caches might lock onto a specific A/B variant and erroneously serve it universally to all users.
+- **P99 Initial Latency**: The very first time a brand new search term is queried (Cache Miss), the latency will feature a small 50-100ms penalty overhead due to the Worker acting as an intermediary network hop before consulting Algolia.
 
-```mermaid
-sequenceDiagram
-    participant Browser as User Browser
-    participant CF as CF Worker ⚡️
-    participant Edge as Edge Cache 📦
-    participant Algolia as Algolia 📊
-    
-    Browser->>CF: Search (POST /queries)
-    Note over CF: Strip userTokens<br>Hash Payload (SHA-256)
-    CF->>Edge: Match Cache (GET /cache/{hash})
-    
-    alt Cache Hit
-        Edge-->>CF: Cached Results
-        CF-->>Browser: Ultra-Fast Response (~10ms)
-    else Cache Miss
-        Edge-->>CF: Not Found
-        CF->>Algolia: Forward Query (POST)
-        Algolia-->>CF: Algolia Search Results
-        Note over CF: Background Task:<br>cache.put(response)
-        CF->>Edge: Store in Background
-        CF-->>Browser: Fast Response (~50ms)
-    end
-```
-
-## 🚀 Quick Start & Setup
+## 🚀 Step 1: Deploying the Proxy (Backend)
 
 ### 1. Prerequisites
 
@@ -99,7 +76,7 @@ cd algolia-caching-proxy-via-cloudflare-worker
 npm install
 ```
 
-### 3. Development
+### 3. Local Development
 
 Run the local Cloudflare development server:
 ```bash
@@ -107,29 +84,17 @@ npm run dev
 ```
 Your worker will be locally accessible by default at `http://localhost:8787`.
 
-### 4. Deploy to Production
-
-To deploy your worker to Cloudflare, first you will need to authenticate your terminal with Cloudflare. You can do this by running:
-```bash
-npx wrangler login
-```
-
-Once authenticated, you can deploy the worker by running:
-```bash
-npm run deploy
-```
-
-## ⚙️ Configuration & Security
+### 4. Configuration (CRITICAL)
 
 All major settings are located in `src/config.js`.
 
-### Cache TTL (Time-To-Live)
+**Cache TTL (Time-To-Live)**
 
 Define how long search responses should stay cached:
 - **`CDN_CACHE_TTL`**: Time on Cloudflare's Edge (Default: 1 Month).
 - **`BROWSER_CACHE_TTL`**: Time in the user's local browser (Default: 1 Hour).
 
-### Security & CORS Setup
+**Security & CORS Setup**
 
 > ⚠️ **Crucial for Production:** By default, `ALLOWED_ORIGIN` contains `'*'` for easy development and testing. This should be restricted before going live to prevent unauthorized access to your Algolia data or someone caching their own data in your account and using your bandwidth.
 
@@ -138,20 +103,14 @@ Define how long search responses should stay cached:
 3. Redeploy the worker.
 *(Note: For advanced CI/CD pipelines, consider overriding this value using `wrangler.jsonc` `[vars]` to avoid committing production domains to your source code repository).*
 
-### 🛡️ Prevent Malicious Billing (Cache-Busting) Attacks
-
-Because Algolia bills based on number of search requests, and this proxy caches does it based on the exact search string, an attacker could write a script that sends thousands of random, unique queries (e.g., `query="random-uuid-1"`). Since these will never hit the cache, and they will all be forwarded to Algolia and consume your Algolia quota.
-
-You should configure **[Cloudflare Rate Limiting (WAF Rules)](https://developers.cloudflare.com/waf/rate-limiting-rules/)** on your Custom Domain to aggressively block IPs making an unnatural volume of search requests.
-
-### Connect a Custom Domain (Highly Recommended)
+**Connect a Custom Domain (Highly Recommended)**
 
 Deploying to a default `.workers.dev` subdomain limits your caching capabilities. Attaching a Custom Domain in Cloudflare unlocks:
 
 - **Smart Tiered Cache**: Instead of caching user requests only in the nearest Cloudflare datacenter, Cloudflare routes requests through centralized regional hubs. This significantly increases cache hit rates and reduces origin trips, **significantly lowering the number of requests sent to Algolia**. [Read more here.](https://developers.cloudflare.com/cache/how-to/tiered-cache/#smart-tiered-cache)
 - **Manual Cache Purging**: Without a custom domain, you cannot manually clear the edge cache and must wait for the TTL to naturally expire.
 
-#### How to configure
+**How to configure**
 
 You can assign a custom domain using the Cloudflare Dashboard (under the Worker's **Triggers** tab), or by adding it directly to your `wrangler.jsonc` file:
 
@@ -164,7 +123,19 @@ You can assign a custom domain using the Cloudflare Dashboard (under the Worker'
 ]
 ```
 
-## 💻 Client-Side Integration
+### 5. Deploy to Production
+
+To deploy your worker to Cloudflare, first you will need to authenticate your terminal with Cloudflare. You can do this by running:
+```bash
+npx wrangler login
+```
+
+Once authenticated, you can deploy the worker by running:
+```bash
+npm run deploy
+```
+
+## 💻 Step 2: Frontend Integration (Client)
 
 To start routing traffic through your new Worker, add 'hosts' array to the Algolia client initialization config in your frontend code:
 
@@ -216,15 +187,13 @@ index.search('query').then(({ hits }) => {
 
 > **Peace of Mind Guarantee:** By explicitly defining these fallback hosts in your initialization, Algolia's SDK guarantees that if your Cloudflare Worker is ever down, misconfigured, or returning 5xx errors, it will instantly and smoothly route the user's search query to the official Algolia servers without breaking the frontend experience.
 
-## ⚠️ Known Trade-offs & Limitations
+## 🛡️ Step 3: Production Security (Post-Deploy)
 
-Using an aggressive caching architecture inherently means you're trading a few of Algolia's dynamic features in exchange for speed and reduced costs. You must be aware of:
+### Prevent Malicious Billing (Cache-Busting) Attacks
 
-- **Search Only (Do not use for Backend/Indexing)**: This proxy is designed **exclusively for Search (Read) requests originating from frontend clients**. Do not configure your backend/indexing clients to use this proxy, as write operations will fail on Algolia's DSN endpoints.
-- **Analytics Drift & AI Feature Corruption**: Since cached queries never physically hit Algolia, your internal Algolia dashboard analytics (top searches, click CTRs, conversions) will underreport volume. **Crucially, if you rely on AI features like Dynamic Re-Ranking, Query Categorization, or Click Analytics & Insights**, this proxy will break your tracking. It will serve the identical `queryID` to thousands of different users, resulting in highly distorted user journey tracking within Algolia's machine learning models.
-- **No Native Personalization**: Algolia's "Personalized Results" feature heavily relies on the `userToken` header. Because this worker purposely strips the `userToken` off the request body (so the cache is homogenized globally across all users), native personalization will simply **not work**.
-- **A/B Testing Impact**: If utilizing Algolia A/B testing dynamically behind the scenes, Cloudflare Edge caches might lock onto a specific A/B variant and erroneously serve it universally to all users.
-- **P99 Initial Latency**: The very first time a brand new search term is queried (Cache Miss), the latency will feature a small 50-100ms penalty overhead due to the Worker acting as an intermediary network hop before consulting Algolia.
+Because Algolia bills based on number of search requests, and this proxy caches does it based on the exact search string, an attacker could write a script that sends thousands of random, unique queries (e.g., `query="random-uuid-1"`). Since these will never hit the cache, and they will all be forwarded to Algolia and consume your Algolia quota.
+
+You should configure **[Cloudflare Rate Limiting (WAF Rules)](https://developers.cloudflare.com/waf/rate-limiting-rules/)** on your Custom Domain to aggressively block IPs making an unnatural volume of search requests.
 
 ## 🔧 Maintenance & Troubleshooting
 
@@ -266,7 +235,42 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/<YOUR_ZONE_ID>/purge_ca
 
 See [Cloudflare API Documentation](https://developers.cloudflare.com/api/resources/cache/) for more info.
 
-## 📁 Project Structure
+## 🏗️ Architecture: How it Works
+
+Algolia strictly requires `POST` requests for searches. However, virtually all CDN services (including Cloudflare) normally **only cache `GET` requests**. This worker uses a "Ghost GET Request" workaround to force Cloudflare to cache Algolia `POST` responses:
+
+1. **Intercept & Cleanse**: Catches the incoming `POST` request and cleanses dynamic, non-cacheable tokens (like `userToken`) from the JSON POST body.
+2. **Deterministic Hashing**: Generates a hyper-fast SHA-256 hash of the cleansed payload.
+3. **Ghost GET Request**: Translates this hash into a simulated (ghost) `GET` URL to act as a unique cache-key for Cloudflare's Cache API.
+4. **Resolution**:
+   - **Cache Hit**: Resolves instantly directly from the Cloudflare Edge.
+   - **Cache Miss**: Forwards the exact original `POST` payload to Algolia. Upon receiving the result, it is immediately served to the user, while simultaneously being saved to the Edge Cache via a background `ctx.waitUntil()` process.
+
+```mermaid
+sequenceDiagram
+    participant Browser as User Browser
+    participant CF as CF Worker ⚡️
+    participant Edge as Edge Cache 📦
+    participant Algolia as Algolia 📊
+    
+    Browser->>CF: Search (POST /queries)
+    Note over CF: Strip userTokens<br>Hash Payload (SHA-256)
+    CF->>Edge: Match Cache (GET /cache/{hash})
+    
+    alt Cache Hit
+        Edge-->>CF: Cached Results
+        CF-->>Browser: Ultra-Fast Response (~10ms)
+    else Cache Miss
+        Edge-->>CF: Not Found
+        CF->>Algolia: Forward Query (POST)
+        Algolia-->>CF: Algolia Search Results
+        Note over CF: Background Task:<br>cache.put(response)
+        CF->>Edge: Store in Background
+        CF-->>Browser: Fast Response (~50ms)
+    end
+```
+
+## 📁 Project Structure & Admin
 
 | File | Description |
 | :--- | :--- |
