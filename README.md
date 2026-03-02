@@ -294,3 +294,255 @@ Inspired by:
 ## 📄 License
 
 Released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+## ❓ Frequently Asked Questions (FAQ)
+
+<details>
+<summary><b>1. What exactly does this proxy do?</b></summary>
+It intercepts Algolia search POST requests originating from your frontend. It checks if the exact same search has been made recently, and if so, returns the result instantly from Cloudflare's Edge Cache instead of hitting Algolia's servers and consuming your quota.
+</details>
+
+<details>
+<summary><b>2. Is this officially supported by Algolia or Cloudflare?</b></summary>
+No, this is an independent, open-source community project. It is not affiliated with, endorsed by, or supported by Algolia or Cloudflare.
+</details>
+
+<details>
+<summary><b>3. How much money can I really save?</b></summary>
+If your site has highly repetitive searches (like e-commerce, documentation hubs, or media portals), you can reduce your billable Algolia operations by up to 99%, depending on your cache TTL and traffic volume.
+</details>
+
+<details>
+<summary><b>4. Will caching Algolia slow down my search?</b></summary>
+No. In fact, cache hits are served directly from the nearest Cloudflare Edge node to the user, resulting in ultra-fast responses (~10-30ms) compared to a full trip to Algolia. Cache misses incur a tiny 50ms penalty.
+</details>
+
+<details>
+<summary><b>5. What happens if the Cloudflare Worker goes down?</b></summary>
+By configuring Algolia's official fallback hosts in your frontend client, Algolia's SDK guarantees that if the first host fails (your Worker), the query seamlessly routes to official Algolia servers without breaking the frontend experience.
+</details>
+
+<details>
+<summary><b>6. Does this work with Algolia InstantSearch?</b></summary>
+Yes! It is completely plug-and-play compatible with all Algolia frontend libraries (InstantSearch, React, Vue, pure JS) without any modifications to how InstantSearch works.
+</details>
+
+<details>
+<summary><b>7. How do I clear or purge the cache when my database updates?</b></summary>
+You can manually invalidate the Cloudflare Edge cache via the Cloudflare Dashboard UI or programmatically via a Headless cURL request using Cloudflare's API. This behavior requires a Custom Domain.
+</details>
+
+<details>
+<summary><b>8. Why do I need a Custom Domain on Cloudflare to use this effectively?</b></summary>
+A Custom Domain unlocks Cloudflare's Smart Tiered Cache (which drastically increases cache hit rates by routing requests through regional hubs) and allows you to manually purge the cache, which isn't natively possible on a default `.workers.dev` subdomain.
+</details>
+
+<details>
+<summary><b>9. Does this support Algolia Personalization?</b></summary>
+No. To ensure a high cache hit rate globally across all users, user-specific tokens (`userToken`) are stripped. Native Algolia personalization features will not work through this proxy.
+</details>
+
+<details>
+<summary><b>10. Will this break my Algolia Analytics and Click Tracking?</b></summary>
+Yes. Since cached requests never physically reach Algolia, your internal Algolia dashboard analytics will underreport search volume. AI features like Dynamic Re-Ranking and Query Categorization will also be severely affected.
+</details>
+
+<details>
+<summary><b>11. How do you prevent attackers from running up my Algolia bill by bypassing the cache?</b></summary>
+You should configure Cloudflare Rate Limiting (WAF Rules) on your Custom Domain to aggressively block IPs making an unnatural volume of random, unique search requests intentionally designed to bypass the cache.
+</details>
+
+<details>
+<summary><b>12. Does this cache Algolia indexing or write operations?</b></summary>
+No. This proxy is designed exclusively for Search (Read) requests. You should not route your backend indexing or write operations through this proxy, they will fail.
+</details>
+
+<details>
+<summary><b>13. How does the proxy handle different Algolia indices or API keys?</b></summary>
+The unique cache key is generated using a SHA-256 hash that natively incorporates the API Key, Application ID, and query payload. This means it safely supports querying completely different Algolia Applications and Indexes simultaneously without cache bleeding.
+</details>
+
+<details>
+<summary><b>14. Can I use this with frontend frameworks like React, Vue, or Angular?</b></summary>
+Yes, absolutely. You only need to change the `hosts` array during the frontend initialization of the Algolia client. It continues to work normally within your framework of choice's InstantSearch wrapper.
+</details>
+
+<details>
+<summary><b>15. What cache hit rate can I expect?</b></summary>
+This heavily depends on your specific traffic patterns. High-traffic sites with common queries or high-volume default empty queries will see very high cache hit rates, while sites with entirely unique, long-tail queries will see lower hit rates.
+</details>
+
+<details>
+<summary><b>16. How long are search results cached for?</b></summary>
+By default, results are cached at the Cloudflare Edge for 1 month (`CDN_CACHE_TTL`) and in the user's browser for 1 hour (`BROWSER_CACHE_TTL`). Both values can be easily adjusted in `src/config.js`.
+</details>
+
+<details>
+<summary><b>17. Does the proxy cache responses in the user's browser, or just on the Edge server?</b></summary>
+Both. It returns specific `Cache-Control` headers that instruct the user's local browser to cache the response for `BROWSER_CACHE_TTL`, and Cloudflare's CDN to cache it for `CDN_CACHE_TTL`.
+</details>
+
+<details>
+<summary><b>18. Where do I configure the Allowed Origins for CORS security?</b></summary>
+In `src/config.js`, you should change the `ALLOWED_ORIGIN` rule from `['*']` to strictly contain your actual frontend production domains to prevent unauthorized API requests against your project payload.
+</details>
+
+<details>
+<summary><b>19. Can Algolia shut down my account for doing this?</b></summary>
+While Algolia's Terms of Service generally do not explicitly ban CDN caching middle-layers (which are standard architectural patterns), it does reduce their revenue. As this is an open-source tool running on your own infrastructure, you are responsible for mitigating risks and reviewing the ToS of any service provider.
+</details>
+
+<details>
+<summary><b>20. Does this work with A/B testing in Algolia?</b></summary>
+No. If you use Algolia A/B testing dynamically behind the scenes, Cloudflare Edge caches might lock onto a specific A/B variant on the first cache miss and erroneously serve it universally to all users.
+</details>
+
+<details>
+<summary><b>21. Does this work with Algolia Recommend?</b></summary>
+Yes, as long as the requests are made via HTTP POST. However, since Algolia Recommend relies heavily on user behavior and personalization, aggressive edge caching might degrade the effectiveness of the recommendations.
+</details>
+
+<details>
+<summary><b>22. How do I debug if caching is actually working?</b></summary>
+Inspect the network tab in your browser's developer tools. Look at the response headers for your search request. The `cf-cache-status` header will indicate `HIT` (served from cache) or `MISS` (served from Algolia).
+</details>
+
+<details>
+<summary><b>23. Can I cache based on user roles or permissions (Secured API Keys)?</b></summary>
+This proxy is designed for public data. If you use Algolia Secured API Keys with embedded filters for row-level security, they will be cached based on the token. However, you must carefully modify the proxy to not strip role-identifying tokens, otherwise users might see unauthorized cached data.
+</details>
+
+<details>
+<summary><b>24. Does this proxy help with rate limiting users?</b></summary>
+The Worker itself doesn't inherently rate-limit, but by routing traffic through Cloudflare, you can easily apply Cloudflare's Web Application Firewall (WAF) and Rate Limiting rules before the request even reaches your Algolia quota.
+</details>
+
+<details>
+<summary><b>25. Can I use this with Algolia's free "Build" tier?</b></summary>
+Absolutely! In fact, it is highly recommended. It helps prevent accidental traffic spikes or scrapers from silently exhausting your 10,000 monthly search limit.
+</details>
+
+<details>
+<summary><b>26. Will this break Algolia Rules (Visual Editor)?</b></summary>
+No. Standard Algolia Rules (e.g., pinning an item, synonyms) execute on Algolia's servers. The cached response will correctly contain the rule-applied results. Changing a rule simply requires purging the cache.
+</details>
+
+<details>
+<summary><b>27. Can I cache multiple Algolia indices with one Cloudflare Worker?</b></summary>
+Yes. The requested index name is part of the URL path and payload, which is hashed into the cache key. Two identical searches on different indices will generate two distinct cache entries.
+</details>
+
+<details>
+<summary><b>28. Does this cache Algolia Autocomplete queries?</b></summary>
+Yes. Autocomplete queries are fundamentally just standard Algolia search requests. Since they trigger on every keystroke, caching them saves enormous amounts of quota.
+</details>
+
+<details>
+<summary><b>29. Does this work for native mobile apps (iOS/Android)?</b></summary>
+Yes. Update your iOS or Android Algolia SDK initialization slightly to point its custom host array to your Cloudflare Worker's URL. The network layer handles the rest.
+</details>
+
+<details>
+<summary><b>30. What happens to "No Results" searches?</b></summary>
+Empty results (0 hits) are still valid 200 OK HTTP responses from Algolia. The proxy caches these too, which prevents users (or scrapers) spamming invalid queries from draining your quota.
+</details>
+
+<details>
+<summary><b>31. Can I bypass the proxy for specific, critical queries?</b></summary>
+You would handle this in your frontend routing logic. Standard queries use an Algolia client pointing to Cloudflare; real-time critical queries use a separate Algolia client pointing directly to Algolia.
+</details>
+
+<details>
+<summary><b>32. Will I hit Cloudflare Worker CPU limits?</b></summary>
+Highly unlikely. Stripping JSON and generating a SHA-256 hash takes fractions of a millisecond, well below Cloudflare's 10ms (free) or 50ms (paid) CPU limits.
+</details>
+
+<details>
+<summary><b>33. Can I use Cloudflare KV or Durable Objects instead of Cache API?</b></summary>
+You could modify the code to do so, but the native Cache API is significantly faster, strictly designed for HTTP payload storage, and doesn't incur the granular read/write costs of KV.
+</details>
+
+<details>
+<summary><b>34. What if my Algolia POST payload is unusually large?</b></summary>
+Cloudflare's Cache API natively supports large payloads. Unless your search query payload exceeds 512MB (which Algolia would reject anyway), the Worker handles it seamlessly.
+</details>
+
+<details>
+<summary><b>35. Does it cache the initial empty query (default load)?</b></summary>
+Yes. When InstantSearch loads, it often fires an empty query `""` to populate the initial UI. Because every user triggers this exact same query, caching it yields the highest savings.
+</details>
+
+<details>
+<summary><b>36. How does the proxy handle Algolia API errors (e.g., 400 or 500)?</b></summary>
+The proxy only caches `200 OK` responses. Any error codes returned by Algolia are passed directly back to the client and bypass the edge cache.
+</details>
+
+<details>
+<summary><b>37. Does this proxy modify the actual Algolia JSON response?</b></summary>
+No. The worker returns the exact, byte-for-byte JSON response provided by Algolia. Your frontend libraries will not notice any difference.
+</details>
+
+<details>
+<summary><b>38. Can I use this with Algolia Faceting and Filtering?</b></summary>
+Yes. All facet selections, filters, and numeric ranges are included in the POST body. The proxy hashes the entire body, meaning `color:red` and `color:blue` queries are correctly cached as separate requests.
+</details>
+
+<details>
+<summary><b>39. Can I implement custom authentication inside this Worker?</b></summary>
+Yes, you can edit the worker to validate JWTs or verify custom headers before processing the request, providing an extra layer of security before Cloudflare even checks the cache.
+</details>
+
+<details>
+<summary><b>40. Is the SHA-256 hash secure enough to prevent cache collisions?</b></summary>
+Yes. A SHA-256 collision is virtually impossible. Even with trillions of unique search possibilities, you will not experience cache collisions crossing over to different queries.
+</details>
+
+<details>
+<summary><b>41. How do I use this across multiple environments (Staging vs. Prod)?</b></summary>
+Deploy two separate Cloudflare Workers (e.g., `algolia-proxy-staging` and `algolia-proxy-prod`), or use Cloudflare's environment variables to manage different ALLOWED_ORIGIN configurations.
+</details>
+
+<details>
+<summary><b>42. Does Algolia have its own "built-in" caching?</b></summary>
+Algolia does utilize internal engine-level caching for speed. However, you are still billed for the network request reaching their servers. Our Cloudflare Worker prevents the request from reaching them entirely.
+</details>
+
+<details>
+<summary><b>43. Can I log cache hits and misses for analytics?</b></summary>
+Yes, you can enable Cloudflare Logpush or Worker Analytics on your dashboard to monitor traffic, or add a `console.log` inside the worker and tail it using `wrangler tail`.
+</details>
+
+<details>
+<summary><b>44. Does this violate Algolia's Terms of Service?</b></summary>
+Algolia's Terms of Service generally do not prohibit standard CDN caching layers (a standard architectural pattern). However, since it deliberately reduces their billable revenue, you should review your specific enterprise contract if applicable.
+</details>
+
+<details>
+<summary><b>45. Can I deploy this using Infrastructure as Code (Terraform, Pulumi)?</b></summary>
+Yes. Because it is a standard Cloudflare Worker, you can manage and deploy the script using the Cloudflare Terraform provider or Pulumi just like any other worker.
+</details>
+
+<details>
+<summary><b>46. Will this proxy work with Algolia multi-cluster / DSN setups?</b></summary>
+Yes. The worker simply acts as a standard HTTP client forwarding the payload to the provided Algolia endpoint. DSN routing rules still apply on cache misses.
+</details>
+
+<details>
+<summary><b>47. What happens if Cloudflare Cache is purged globally while under high traffic?</b></summary>
+The next wave of requests will be "Cache Misses" and will hit Algolia directly. Once Algolia responds, Cloudflare will instantly re-populate the edge nodes, shielding Algolia again.
+</details>
+
+<details>
+<summary><b>48. Can I use Cloudflare Page Rules to control the Worker's cache?</b></summary>
+No. Because the Worker programmatically manages the Cache API using the "Ghost GET Request" workaround, standard Cloudflare Page Rules (which operate at the routing level) will not affect it.
+</details>
+
+<details>
+<summary><b>49. Why not just cache directly in the user's browser using local storage?</b></summary>
+Browser caching only benefits a single user *after* they search for something twice. Edge caching benefits *all* users globally the moment *any* single user searches for it once.
+</details>
+
+<details>
+<summary><b>50. Can I modify what gets stripped from the payload?</b></summary>
+Yes! If you have custom parameters that don't affect search results but vary per user (like analytics tags), open `src/utils.js` and add those keys to the `cleansePayload` function to improve your hit rate.
+</details>
