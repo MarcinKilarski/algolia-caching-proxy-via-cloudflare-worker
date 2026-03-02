@@ -182,20 +182,14 @@ const client = algoliasearch(
       // when you run it locally.
       // (Make sure to comment out the Primary Production host and fallback hosts when doing this)
       // -----------------------------------------------------------
-      // {
-      //   protocol: "http",
-      //   url: "localhost:8787",
-      // },
+      // { protocol: "http", url: "localhost:8787" },
 
       // -----------------------------------------------------------
       // 1. PRIMARY HOST (PRODUCTION)
       // This routes all search requests through your deployed Cloudflare Worker.
       // (Make sure to replace "algolia-cache.your-website.com" with the domain you assigned to your worker!)
       // -----------------------------------------------------------
-      {
-        protocol: "https", 
-        url: "algolia-cache.your-website.com",
-      },
+      { protocol: "https", url: "algolia-cache.your-website.com" },
 
       // -----------------------------------------------------------
       // 2. FALLBACK HOSTS (CRITICAL)
