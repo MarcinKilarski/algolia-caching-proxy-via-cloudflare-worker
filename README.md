@@ -1,3 +1,5 @@
+![Algolia Proxy Cloudflare Worker](thumbnail.png)
+
 # ⚡️ Algolia Caching Proxy via Cloudflare Workers
 
 [![Algolia](https://img.shields.io/badge/Algolia-Search-003DFF?logo=algolia&logoColor=white)](https://www.algolia.com/)
