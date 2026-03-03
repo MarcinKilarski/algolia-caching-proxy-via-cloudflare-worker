@@ -1,6 +1,8 @@
 ![Algolia Proxy Cloudflare Worker](thumbnail.png)
 
-# ⚡️ Algolia Cloudflare Worker proxy (Caching)
+# ⚡️ Algolia Cloudflare Worker proxy (Edge Caching)
+
+**Slash Algolia Costs by 80% with Edge Caching on Cloudflare Workers.**
 
 [![Algolia](https://img.shields.io/badge/Algolia-Search-003DFF?logo=algolia&logoColor=white)](https://www.algolia.com/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
