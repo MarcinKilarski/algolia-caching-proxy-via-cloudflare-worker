@@ -4,8 +4,8 @@ import { sha256, applyCors, normalizeAlgoliaBody, getCorsHeaders, checkOrigin } 
 export default {
 	async fetch(request, env, ctx) {
 		// Check if request is coming from allowed domain
-		const originResponse = checkOrigin(request);
-		if (originResponse) return originResponse;
+		const forbiddenResponse = checkOrigin(request);
+		if (forbiddenResponse) return forbiddenResponse;
 
 		// Handle Preflight: Browsers check CORS permissions before the actual search
 		if (request.method === "OPTIONS") {
@@ -86,7 +86,7 @@ export default {
 					 * We prepare the response for the cache by adding TTL (Time To Live) headers.
 					 */
 					const responseToCache = new Response(originResponse.body, originResponse);
-					responseToCache.headers.set("Cache-Control", `s-maxage=${CDN_CACHE_TTL}`);
+					responseToCache.headers.set("Cache-Control", `public, s-maxage=${CDN_CACHE_TTL}, max-age=${BROWSER_CACHE_TTL}`);
 
 					// Remove encoding and length headers to let Cloudflare handle compression correctly.
 					// This prevents the browser from receiving decompressed data that still has a 'gzip' header.
@@ -100,18 +100,15 @@ export default {
 					response = responseToCache;
 				}
 
-				// Add browser-level caching instructions before returning the response to a user's browser
-				const finalResponse = applyCors(new Response(response.body, response), request);
-				finalResponse.headers.set("Cache-Control", `public, max-age=${BROWSER_CACHE_TTL}`);
-
-				return finalResponse;
+				return applyCors(new Response(response.body, response), request);
 			}
 
 			// Return a generic OK response for non-POST requests (like health checks)
 			return applyCors(new Response("Algolia Caching Proxy is operational.", { status: 200 }), request);
 
 		} catch (e) {
-			return new Response("Error thrown: " + e.message, {
+			console.error("Proxy error:", e);
+			return new Response("Internal Server Error", {
 				status: 500,
 				headers: getCorsHeaders()
 			});

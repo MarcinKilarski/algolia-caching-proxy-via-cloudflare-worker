@@ -2,6 +2,10 @@ import { ALLOWED_ORIGIN } from './config.js';
 
 /**
  * Generates CORS headers.
+ * NOTE: Access-Control-Allow-Origin is set to "*" because the origin is validated 
+ * beforehand in checkOrigin(request). If not allowed, the request is rejected 
+ * immediately. This approach maximizes performance by avoiding dynamic header 
+ * generation while maintaining security.
  * @returns {Object} CORS headers.
  */
 export function getCorsHeaders() {
@@ -36,7 +40,7 @@ export async function sha256(message) {
  */
 export function applyCors(response, request) {
   const newResponse = new Response(response.body, response);
-  Object.entries(getCorsHeaders(request)).forEach(([key, value]) => {
+  Object.entries(getCorsHeaders()).forEach(([key, value]) => {
     newResponse.headers.set(key, value);
   });
 
@@ -56,6 +60,8 @@ export function applyCors(response, request) {
 export function normalizeAlgoliaBody(body) {
   return body
     .replace(/&?userToken=[^&"\\]*/g, '')
+    .replace(/&?clickAnalytics=[^&"\\]*/g, '')
+    .replace(/&?analyticsTags=[^&"\\]*/g, '')
     .replace(/params":"&/g, 'params":"')
     .replace(/&$/, ''); // Clean up trailing ampersands
 }
