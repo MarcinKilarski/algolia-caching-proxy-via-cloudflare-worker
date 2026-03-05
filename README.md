@@ -92,13 +92,13 @@ Your worker will be locally accessible by default at `http://localhost:8787`.
 
 All major settings are located in `src/config.js`.
 
-**Cache TTL (Time-To-Live)**
+#### Cache TTL (Time-To-Live)
 
 Define how long search responses should stay cached:
 - **`CDN_CACHE_TTL`**: Time on Cloudflare's Edge (Default: 1 Month).
 - **`BROWSER_CACHE_TTL`**: Time in the user's local browser (Default: 1 Hour).
 
-**Security & CORS Setup**
+#### Security & CORS Setup
 
 > ⚠️ **Crucial for Production:** By default, `ALLOWED_ORIGIN` contains `'*'` for easy development and testing. This should be restricted before going live to prevent unauthorized access to your Algolia data or someone caching their own data in your account and using your bandwidth.
 
@@ -107,7 +107,21 @@ Define how long search responses should stay cached:
 3. Redeploy the worker.
 *(Note: For advanced CI/CD pipelines, consider overriding this value using `wrangler.jsonc` `[vars]` to avoid committing production domains to your source code repository).*
 
-**Connect a Custom Domain (Highly Recommended)**
+#### 🌐 Cloudflare Smart Placement Considerations (cost vs speed)
+
+This project enables [Cloudflare Smart Placement](https://developers.cloudflare.com/workers/configuration/placement/) by default in `wrangler.jsonc`. Cloudflare automatically determines the optimal location to execute your Worker—often moving execution closer to your backend origin (Algolia) rather than the end user. 
+
+For this specific caching proxy, you should weigh the pros and cons of keeping `placement: { "mode": "smart" }` enabled:
+
+**Pros (Why it's enabled by default):**
+- **Aggressive cost savings:** Forcing all Worker traffic into a single execution region consolidates the cache. This prevents the cache from splintering across multiple global regions, which reduces the total number of redundant requests sent to Algolia and cuts down on Algolia costs.
+
+**Cons (When to disable):**
+- **Slower Cache Hits**: Smart Placement moves the Worker to a centralized region (most likely US region where Algolia is hosted), users in Europe or Asia hitting a *cached* query will suffer cross-globe network latency slowing requrest response of your Worker.
+
+**Recommendation:** Keep Smart Placement **enabled** to maximize cost savings and improve cache miss performance. You should consider **disabling** it (remove it from `wrangler.jsonc`) if your priority is minimizing latency for global users on **cache hits**, and you are willing to accept slightly higher Algolia costs due to the cache being fragmented across more regions.
+
+#### Connect a Custom Domain (Highly Recommended)
 
 Deploying to a default `.workers.dev` subdomain limits your caching capabilities. Attaching a Custom Domain in Cloudflare unlocks:
 
