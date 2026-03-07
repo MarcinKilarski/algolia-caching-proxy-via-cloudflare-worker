@@ -105,7 +105,8 @@ Define how long search responses should stay cached:
 1. Open `src/config.js`.
 2. Replace `'*'` with your actual frontend domain(s) (e.g., `'https://your-website.com'`). You can add multiple domains as separate strings in the array.
 3. Redeploy the worker.
-**(Note: For advanced CI/CD pipelines, consider overriding this value using `wrangler.jsonc` `[vars]` to avoid committing production domains to your source code repository).**
+
+**Note:** For advanced CI/CD pipelines, consider overriding this value using `wrangler.jsonc` `[vars]` to avoid committing production domains to your source code repository.
 
 #### 🌐 Cloudflare Smart Placement Considerations (cost vs speed)
 
