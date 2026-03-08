@@ -63,15 +63,59 @@ Using an aggressive caching architecture inherently means you're trading a few o
 - **A/B Testing Impact**: If utilizing Algolia A/B testing dynamically behind the scenes, Cloudflare Edge caches might lock onto a specific A/B variant and erroneously serve it universally to all users.
 - **P99 Initial Latency**: The very first time a brand new search term is queried (Cache Miss), the latency will feature a small 50-100ms penalty overhead due to the Worker acting as an intermediary network hop before consulting Algolia.
 
-## 🚀 Step 1: Deploying the Proxy (Backend)
+## ⚡ 1 Minute Installation (Best for Testing)
 
-### 1. Prerequisites
+### Step 1: Clone and install locally the Algolia Cloudflare Worker proxy repository
+
+```bash
+git clone https://github.com/MarcinKilarski/algolia-caching-proxy-via-cloudflare-worker.git algolia-caching-proxy-via-cloudflare-worker
+cd algolia-caching-proxy-via-cloudflare-worker
+npm install
+```
+### Step 2: Deploy the worker to Cloudflare.
+
+To deploy your worker to Cloudflare, first you will need to authenticate your terminal with Cloudflare.
+```bash
+npx wrangler login
+```
+
+Now, you can deploy the worker:
+```bash
+npm run deploy
+```
+
+You will get your worker url in the terminal after deployment. It will look like this:
+```
+https://algolia-caching-proxy-via-cloudflare-worker.your-account-name.workers.dev
+```
+
+### Step 3: Update your Algolia client configuration
+
+To start routing traffic through your new Worker, add 'hosts' array to the Algolia client initialization config "hosts" in your frontend code:
+
+```javascript
+import algoliasearch from 'algoliasearch';
+
+const client = algoliasearch('YOUR_APP_ID', 'YOUR_SEARCH_API_KEY', {
+  hosts: [
+    { protocol: "https", url: "algolia-caching-proxy-via-cloudflare-worker.YOUR_ACCOUNT.workers.dev" }, 
+  ]
+});
+```
+
+🎉 **Success!** Your Algolia searches are now being served instantly from the Cloudflare Edge, reducing your Algolia costs.
+
+## ⚙️ Advanced Installation (Best for Production)
+
+### 🚀 Step 1: Deploying the Proxy (Backend)
+
+#### 1. Prerequisites
 
 - [Node.js](https://nodejs.org/) installed on your machine.
 - A free [Cloudflare Account](https://dash.cloudflare.com/sign-up).
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed globally.
 
-### 2. Installation
+#### 2. Installation
 
 Clone the repository, enter the directory, and install the local packages:
 ```bash
@@ -80,7 +124,7 @@ cd algolia-caching-proxy-via-cloudflare-worker
 npm install
 ```
 
-### 3. Local Development
+#### 3. Local Development
 
 Run the local Cloudflare development server:
 ```bash
@@ -88,17 +132,17 @@ npm run dev
 ```
 Your worker will be locally accessible by default at `http://localhost:8787`.
 
-### 4. Configuration (CRITICAL)
+#### 4. Configuration (CRITICAL)
 
 All major settings are located in `src/config.js`.
 
-#### Cache TTL (Time-To-Live)
+##### Cache TTL (Time-To-Live)
 
 Define how long search responses should stay cached:
 - **`CDN_CACHE_TTL`**: Time on Cloudflare's Edge (Default: 1 Month).
 - **`BROWSER_CACHE_TTL`**: Time in the user's local browser (Default: 1 Hour).
 
-#### Security & CORS Setup
+##### Security & CORS Setup
 
 > ⚠️ **Crucial for Production:** By default, `ALLOWED_ORIGIN` contains `'*'` for easy development and testing. This should be restricted before going live to prevent unauthorized access to your Algolia data or someone caching their own data in your account and using your bandwidth.
 
@@ -108,7 +152,7 @@ Define how long search responses should stay cached:
 
 **Note:** For advanced CI/CD pipelines, consider overriding this value using `wrangler.jsonc` `[vars]` to avoid committing production domains to your source code repository.
 
-#### 🌐 Cloudflare Smart Placement Considerations (cost vs speed)
+##### 🌐 Cloudflare Smart Placement Considerations (cost vs speed)
 
 This project enables [Cloudflare Smart Placement](https://developers.cloudflare.com/workers/configuration/placement/) by default in `wrangler.jsonc`. Cloudflare automatically determines the optimal location to execute your Worker—often moving execution closer to your backend origin (Algolia) rather than the end user. 
 
@@ -122,7 +166,7 @@ For this specific caching proxy, you should weigh the pros and cons of keeping `
 
 **Recommendation:** Keep Smart Placement **enabled** to maximize cost savings and improve cache miss performance. You should consider **disabling** it (remove it from `wrangler.jsonc`) if your priority is minimizing latency for global users on **cache hits**, and you are willing to accept slightly higher Algolia costs due to the cache being fragmented across more regions.
 
-#### Connect a Custom Domain (Highly Recommended)
+##### Connect a Custom Domain (Highly Recommended)
 
 Deploying to a default `.workers.dev` subdomain limits your caching capabilities. Attaching a Custom Domain in Cloudflare unlocks:
 
@@ -142,7 +186,7 @@ You can assign a custom domain using the Cloudflare Dashboard (under the Worker'
 ]
 ```
 
-### 5. Deploy to Production
+#### 5. Deploy to Production
 
 To deploy your worker to Cloudflare, first you will need to authenticate your terminal with Cloudflare. You can do this by running:
 ```bash
@@ -158,16 +202,14 @@ By default, the worker will be deployed to a Cloudflare subdomain (e.g., `https:
 
 Read more in [Cloudflare's deploy command documentation](https://developers.cloudflare.com/workers/wrangler/commands/#deploy).
 
-## 💻 Step 2: Frontend Integration (Client)
+### 💻 Step 2: Frontend Integration (Client)
 
-To start routing traffic through your new Worker, add 'hosts' array to the Algolia client initialization config in your frontend code:
+To start routing traffic through your new Worker, add 'hosts' array to the Algolia client initialization config "hosts" in your frontend code:
 
 ```javascript
 import algoliasearch from 'algoliasearch';
 
-const client = algoliasearch(
-  'YOUR_APP_ID',
-  'YOUR_SEARCH_API_KEY',
+const client = algoliasearch('YOUR_APP_ID', 'YOUR_SEARCH_API_KEY', 
   {
     hosts: [
       // -----------------------------------------------------------
@@ -198,21 +240,15 @@ const client = algoliasearch(
     ],
   }
 );
-
-// Initialize and use Algolia as normal
-const index = client.initIndex('your_index_name');
-index.search('query').then(({ hits }) => {
-  console.log(hits);
-});
 ```
 
 > Read more in [Algolia's Custom Hosts Documentation](https://www.algolia.com/doc/libraries/sdk/customize#custom-hosts).
 
 > **Peace of Mind Guarantee:** By explicitly defining these fallback hosts in your initialization, Algolia's SDK guarantees that if your Cloudflare Worker is ever down, misconfigured, or returning 5xx errors, it will instantly and smoothly route the user's search query to the official Algolia servers without breaking the frontend experience.
 
-## 🛡️ Step 3: Production Security (Post-Deploy)
+### 🛡️ Step 3: Production Security (Post-Deploy)
 
-### Prevent Malicious Billing (Cache-Busting) Attacks
+#### Prevent Malicious Billing (Cache-Busting) Attacks
 
 Because Algolia bills based on number of search requests, and this proxy caches does it based on the exact search string, an attacker could write a script that sends thousands of random, unique queries (e.g., `query="random-uuid-1"`). Since these will never hit the cache, and they will all be forwarded to Algolia and consume your Algolia quota.
 
